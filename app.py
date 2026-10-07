@@ -83,7 +83,22 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+# Tampilan Header dengan Logo
+col_logo, col_text = st.columns([1, 4])
 
+with col_logo:
+    # Memanggil file logo yang sudah diunggah di GitHub
+    st.image("logo.png", width=120)
+
+with col_text:
+    st.markdown("""
+        <div style="padding-top: 10px;">
+            <h1 style="margin: 0; color: #1e3a8a; font-size: 2rem;">IdeaClass ACADEMY</h1>
+            <p style="margin: 0; color: #64748b; font-size: 1rem;">Sistem Administrasi Bimbel • Learn • Grow • Succeed</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
 # Initialize Session State
 if 'siswa' not in st.session_state:
     st.session_state.siswa = pd.DataFrame(columns=['ID', 'Nama', 'Sekolah', 'OrangTua', 'HP_Ortu', 'Program', 'Status'])
