@@ -107,13 +107,26 @@ if 'tentor' not in st.session_state:
 if 'keuangan' not in st.session_state:
     st.session_state.keuangan = pd.DataFrame(columns=['Tanggal', 'Siswa', 'Jenis', 'Nominal', 'Status'])
 
-# Header Banner
-st.markdown("""
-    <div class="header-banner">
-        <h1>🎓 Sistem Administrasi Bimbel</h1>
-        <p>Kelola pendaftaran, data tentor, dan laporan keuangan bimbel dalam satu tempat.</p>
-    </div>
-""", unsafe_allow_html=True)
+# Tampilan Header dengan Logo
+col_logo, col_text = st.columns([1, 4])
+
+with col_logo:
+    try:
+        st.image("logo.png", width=120)
+    except:
+        # Fallback jika logo.png belum di-upload ke GitHub
+        st.image("https://raw.githubusercontent.com/streamlit/streamlit/main/docs/static/logo.png", width=80)
+
+with col_text:
+    st.markdown("""
+        <div style="padding-top: 10px;">
+            <h1 style="margin: 0; color: #1e3a8a; font-size: 2rem;">IdeaClass ACADEMY</h1>
+            <p style="margin: 0; color: #64748b; font-size: 1rem;">Sistem Administrasi Bimbel • Learn • Grow • Succeed</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
+
 
 # Tab Navigasi Utama
 tab_dash, tab_siswa, tab_tentor, tab_keuangan = st.tabs([
