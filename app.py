@@ -88,7 +88,7 @@ col_logo, col_text = st.columns([1, 4])
 
 with col_logo:
     # Memanggil file logo yang sudah diunggah di GitHub
-    st.image("logo.png", width=120)
+    st.image("https://i.ibb.co/3kXpZ2g/logo.png", width=120)
 
 with col_text:
     st.markdown("""
