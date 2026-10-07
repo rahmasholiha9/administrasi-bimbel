@@ -1,20 +1,16 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Sistem Administrasi Bimbel", layout="wide")
 
-# Koneksi ke Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-def load_data(worksheet_name):
-    return conn.read(worksheet=worksheet_name, ttl="0s")
-
-# Load Data Awal
-df_siswa = load_data("Siswa")
-df_tentor = load_data("Tentor")
-df_keuangan = load_data("Keuangan")
+# Database sementara menggunakan session state
+if 'siswa' not in st.session_state:
+    st.session_state.siswa = pd.DataFrame(columns=['ID', 'Nama', 'Sekolah', 'OrangTua', 'HP_Ortu', 'Program', 'Status'])
+if 'tentor' not in st.session_state:
+    st.session_state.tentor = pd.DataFrame(columns=['ID', 'Nama', 'MataPelajaran', 'Tarif_Per_Sesi'])
+if 'keuangan' not in st.session_state:
+    st.session_state.keuangan = pd.DataFrame(columns=['Tanggal', 'Siswa', 'Jenis', 'Nominal', 'Status'])
 
 # Menu Navigasi
 st.sidebar.title("Bimbel Control Center")
@@ -25,20 +21,14 @@ if menu == "Dashboard":
     st.title("📊 Dashboard Ringkasan")
     
     col1, col2, col3 = st.columns(3)
-    total_siswa = len(df_siswa[df_siswa['Status'] == 'Aktif']) if not df_siswa.empty else 0
-    total_tentor = len(df_tentor) if not df_tentor.empty else 0
+    col1.metric("Total Siswa Aktif", len(st.session_state.siswa[st.session_state.siswa['Status'] == 'Aktif']))
+    col2.metric("Total Tentor", len(st.session_state.tentor))
     
-    if not df_keuangan.empty and 'Status' in df_keuangan.columns:
-        total_pembayaran = df_keuangan[df_keuangan['Status'] == 'Lunas']['Nominal'].sum()
-    else:
-        total_pembayaran = 0
-
-    col1.metric("Total Siswa Aktif", total_siswa)
-    col2.metric("Total Tentor", total_tentor)
+    total_pembayaran = st.session_state.keuangan[st.session_state.keuangan['Status'] == 'Lunas']['Nominal'].sum() if not st.session_state.keuangan.empty else 0
     col3.metric("Total Pemasukan", f"Rp {total_pembayaran:,.0f}")
     
     st.subheader("📌 Aktivitas & Status Sistem")
-    st.success("Aplikasi terhubung langsung ke Google Sheets. Data tersimpan permanen!")
+    st.success("Aplikasi Administrasi Bimbel Berhasil Berjalan!")
 
 # 2. MANAJEMEN SISWA & PENDAFTARAN
 elif menu == "Manajemen Siswa":
@@ -55,15 +45,14 @@ elif menu == "Manajemen Siswa":
             
             submitted = st.form_submit_button("Simpan Data Siswa")
             if submitted:
-                new_id = f"SIS-{len(df_siswa) + 1:03d}"
-                new_row = pd.DataFrame([[new_id, nama, sekolah, ortu, hp, program, status]], columns=df_siswa.columns)
-                updated_df = pd.concat([df_siswa, new_row], ignore_index=True)
-                conn.update(worksheet="Siswa", data=updated_df)
-                st.success(f"Siswa {nama} berhasil terdaftar dan tersimpan di Google Sheets!")
+                new_id = f"SIS-{len(st.session_state.siswa) + 1:03d}"
+                new_data = pd.DataFrame([[new_id, nama, sekolah, ortu, hp, program, status]], columns=st.session_state.siswa.columns)
+                st.session_state.siswa = pd.concat([st.session_state.siswa, new_data], ignore_index=True)
+                st.success(f"Siswa {nama} berhasil didaftarkan!")
                 st.rerun()
 
     st.subheader("📋 Data Siswa Terdaftar")
-    st.dataframe(df_siswa, use_container_width=True)
+    st.dataframe(st.session_state.siswa, use_container_width=True)
 
 # 3. MANAJEMEN TENTOR
 elif menu == "Manajemen Tentor":
@@ -77,23 +66,22 @@ elif menu == "Manajemen Tentor":
             
             sub_tentor = st.form_submit_button("Simpan Data Tentor")
             if sub_tentor:
-                t_id = f"TTR-{len(df_tentor) + 1:03d}"
-                new_row = pd.DataFrame([[t_id, nama_tentor, mapel, tarif]], columns=df_tentor.columns)
-                updated_df = pd.concat([df_tentor, new_row], ignore_index=True)
-                conn.update(worksheet="Tentor", data=updated_df)
-                st.success(f"Tentor {nama_tentor} berhasil disimpan!")
+                t_id = f"TTR-{len(st.session_state.tentor) + 1:03d}"
+                new_t = pd.DataFrame([[t_id, nama_tentor, mapel, tarif]], columns=st.session_state.tentor.columns)
+                st.session_state.tentor = pd.concat([st.session_state.tentor, new_t], ignore_index=True)
+                st.success(f"Tentor {nama_tentor} berhasil ditambahkan!")
                 st.rerun()
 
     st.subheader("📋 Daftar Tentor")
-    st.dataframe(df_tentor, use_container_width=True)
+    st.dataframe(st.session_state.tentor, use_container_width=True)
 
 # 4. KEUANGAN & PEMBAYARAN
 elif menu == "Keuangan & SPP":
     st.title("💳 Keuangan & Tagihan SPP")
     
-    if not df_siswa.empty:
+    if not st.session_state.siswa.empty:
         with st.form("form_keuangan"):
-            siswa_pilih = st.selectbox("Pilih Siswa", df_siswa['Nama'].dropna().tolist())
+            siswa_pilih = st.selectbox("Pilih Siswa", st.session_state.siswa['Nama'].tolist())
             jenis = st.selectbox("Jenis Pembayaran", ["SPP Bulanan", "Pendaftaran", "Buku / Modul"])
             nominal = st.number_input("Nominal (Rp)", min_value=0, step=50000)
             status_bayar = st.selectbox("Status", ["Lunas", "Belum Lunas"])
@@ -101,13 +89,12 @@ elif menu == "Keuangan & SPP":
             sub_bayar = st.form_submit_button("Catat Transaksi")
             if sub_bayar:
                 tgl = datetime.now().strftime("%Y-%m-%d")
-                new_row = pd.DataFrame([[tgl, siswa_pilih, jenis, nominal, status_bayar]], columns=df_keuangan.columns)
-                updated_df = pd.concat([df_keuangan, new_row], ignore_index=True)
-                conn.update(worksheet="Keuangan", data=updated_df)
-                st.success("Pembayaran berhasil dicatat ke Google Sheets!")
+                new_k = pd.DataFrame([[tgl, siswa_pilih, jenis, nominal, status_bayar]], columns=st.session_state.keuangan.columns)
+                st.session_state.keuangan = pd.concat([st.session_state.keuangan, new_k], ignore_index=True)
+                st.success("Pembayaran berhasil dicatat!")
                 st.rerun()
     else:
-        st.warning("Belum ada data siswa. Daftarkan siswa terlebih dahulu.")
+        st.warning("Silakan isi data siswa terlebih dahulu pada menu 'Manajemen Siswa'.")
 
     st.subheader("📋 Catatan Arus Kas")
-    st.dataframe(df_keuangan, use_container_width=True)
+    st.dataframe(st.session_state.keuangan, use_container_width=True)
